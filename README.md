@@ -36,8 +36,31 @@ The model (~16 GB) downloads **once** from Hugging Face into
 | `model_infer.py` | one-shot test inference |
 | `chatbot.py` | interactive streaming chat REPL |
 | `run.sh` / `chat.sh` | foreground launchers |
+| `image_setup.sh` | additive bootstrap for FLUX.2 Klein image generation |
+| `image_model.py` | loads FLUX.2 Klein + ponpoke uncensored Qwen3 text encoder |
+| `image_app.py` | Gradio UI for image generation |
+| `image_ui.sh` | foreground launcher for the Gradio UI |
 
 To use a different model, edit `MODEL_REPO` / `MODEL_FILE` in `_model.py`.
+
+## Image-generation mode (FLUX.2 Klein 9B, uncensored text encoder)
+
+On top of the chat path above, this branch adds a Gradio UI that runs
+`black-forest-labs/FLUX.2-klein-9B` with
+`ponpoke/flux2-klein-9b-uncensored-text-encoder` swapped in as the text
+encoder. The text encoder is loaded in 4-bit (nf4) and the whole pipeline
+uses sequential CPU offload to fit on a 22.5 GB L4.
+
+```bash
+bash setup.sh                          # base bootstrap (uv, venv, llama-cpp)
+bash image_setup.sh                    # adds torch cu124, diffusers, gradio, bnb
+huggingface-cli login                  # FLUX.2 Klein base is gated
+bash image_ui.sh                       # Gradio UI at http://<vm-ip>:7860
+```
+
+First run downloads ~35 GB into `~/.cache/huggingface/hub`. Generation is
+~30-90 s/image on an L4 because of sequential offload; a bigger GPU
+(A10G 24 GB, L40S 48 GB) skips offload and is much faster.
 
 ## Why these specific choices (the gotchas)
 
